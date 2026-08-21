@@ -29,8 +29,12 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "https://localhost:5173",
-    "https://todo-frontend-git-main-sanyamy97-6516s-projects.vercel.app",  # Your Vercel URL
 ]
+
+# Add frontend URL from environment variable (for production)
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    ALLOWED_ORIGINS.append(frontend_url)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,7 +45,7 @@ app.add_middleware(
 )
 
 
-# Health check
+# Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
