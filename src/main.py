@@ -1,8 +1,10 @@
+import os
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from .database.core import engine, Base
 from .entities.todo import Todo
-from .entities.user import User  # ← ADD THIS
+from .entities.user import User
 from .controller.todo_controller import router as todo_router
 from .controller.auth_controller import router as auth_router
 from .exceptions.todo_exceptions import (
@@ -16,20 +18,33 @@ from .exceptions.user_exceptions import (
     InvalidCredentialsError,
     UserNotFoundError,
 )
-from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(bind=engine)
 
-
 app = FastAPI(title="Todo App", version="1.0.0")
+
+# CORS Configuration
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "https://localhost:5173",
+    "https://todo-frontend-git-main-sanyamy97-6516s-projects.vercel.app",  # Your Vercel URL
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Health check
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
 
 # Todo Exception Handlers
@@ -71,4 +86,4 @@ async def user_not_found_handler(request, exc: UserNotFoundError):
 
 # Register all controllers
 app.include_router(todo_router)
-app.include_router(auth_router)  # ← ADD THIS
+app.include_router(auth_router)
