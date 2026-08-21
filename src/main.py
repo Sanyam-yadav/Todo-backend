@@ -1,40 +1,62 @@
 import os
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
 from .database.core import engine, Base
 from .entities.todo import Todo
 from .entities.user import User
+
 from .controller.todo_controller import router as todo_router
 from .controller.auth_controller import router as auth_router
+
 from .exceptions.todo_exceptions import (
     TodoNotFoundError,
     TodoCreationError,
     TodoUpdateError,
     TodoDeletionError,
 )
+
 from .exceptions.user_exceptions import (
     UserAlreadyExistsError,
     InvalidCredentialsError,
     UserNotFoundError,
 )
 
+# Create database tables
 Base.metadata.create_all(bind=engine)
 
+
+# Create FastAPI application
 app = FastAPI(title="Todo App", version="1.0.0")
 
-# CORS Configuration
+
+# ============================================================
+# CORS CONFIGURATION
+# ============================================================
+
 ALLOWED_ORIGINS = [
+    # Local development
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
     "https://localhost:5173",
+    # Production React frontend on Vercel
+    "https://todo-frontend-git-main-sanyamy97-6516s-projects.vercel.app",
 ]
 
-# Add frontend URL from environment variable (for production)
+
+# Optional: Add frontend URL from Render environment variable
 frontend_url = os.getenv("FRONTEND_URL")
+
 if frontend_url:
-    ALLOWED_ORIGINS.append(frontend_url)
+    # Remove trailing slash if someone accidentally adds one
+    frontend_url = frontend_url.rstrip("/")
+
+    if frontend_url not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append(frontend_url)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,13 +67,21 @@ app.add_middleware(
 )
 
 
-# Health check endpoint
+# ============================================================
+# HEALTH CHECK
+# ============================================================
+
+
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
 
 
-# Todo Exception Handlers
+# ============================================================
+# TODO EXCEPTION HANDLERS
+# ============================================================
+
+
 @app.exception_handler(TodoNotFoundError)
 async def todo_not_found_handler(request, exc: TodoNotFoundError):
     return JSONResponse(status_code=404, content={"detail": exc.detail})
@@ -72,7 +102,11 @@ async def todo_deletion_error_handler(request, exc: TodoDeletionError):
     return JSONResponse(status_code=400, content={"detail": exc.detail})
 
 
-# User Exception Handlers
+# ============================================================
+# USER EXCEPTION HANDLERS
+# ============================================================
+
+
 @app.exception_handler(UserAlreadyExistsError)
 async def user_already_exists_handler(request, exc: UserAlreadyExistsError):
     return JSONResponse(status_code=409, content={"detail": exc.detail})
@@ -88,6 +122,9 @@ async def user_not_found_handler(request, exc: UserNotFoundError):
     return JSONResponse(status_code=404, content={"detail": exc.detail})
 
 
-# Register all controllers
+# ============================================================
+# REGISTER ROUTERS
+# ============================================================
+
 app.include_router(todo_router)
 app.include_router(auth_router)
